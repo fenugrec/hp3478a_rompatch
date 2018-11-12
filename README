@@ -1,3 +1,7 @@
 Utilities and code for patching HP3478A firmware.
 
 Experimental, not for general consumption
+
+
+* ckfix
+Fix checksum by adjusting last byte.
