@@ -17,23 +17,62 @@ u8 rombuf[ROMSIZE];
 
 FILE *dbg_stream;
 
-/** calculate sum of area */
-static u8 calc_cks(unsigned len) {
+/** calculate "addc" sum of area
+ *
+ * to simulate what the original ROM does, the very last addition's carry
+ * is never added to the total.
+ */
+static u8 calc_cks(u8 *buf, unsigned len) {
 	u8 checksum;
 	unsigned i;
 	u32 sum32 = 0;
 
-	for (i=0; i<len; i++) {
-		sum32 += rombuf[i];
+	for (i=0; i < (len - 1); i++) {
+		sum32 += buf[i];
 	}
 
 	//simulate effect of adding with "addc" opcode
 	checksum = (sum32 & 0xff) + ((sum32 >> 8) & 0xff) + ((sum32 >> 16) & 0xff);
+	//and add last value, *without* its carry
+	checksum += buf[len - 1];
 	return checksum;
 }
 
-static void fixck(FILE *i_file, FILE *o_file) {
+/** fix checksum of ROM loaded at *buf.
+ * ret 0 if ok
+ */
+static int fixck_backend(u8 *buf, unsigned len) {
 	u8 cks_orig, cks_new;
+
+	//calc current sum
+	cks_orig = calc_cks(buf, len);
+	//adjust to bring sum to 0
+	buf[len - 1] -= cks_orig;
+	//printf("orig sum: 0x%02X\n", cks_orig);
+
+	cks_new = calc_cks(buf, len);
+	if (cks_new == 0) {
+		return 0;
+	}
+	printf("checksum adjustment 0x%X failed, got 0x%02X !?\n", (unsigned) buf[len -1], cks_new);
+	return -1;
+}
+
+/* sanity check to make sure algo is correct */
+static void selftest(void) {
+	u8 fakerom[3];
+	unsigned val;
+
+	for (val=0; val <= 0xFFFF; val++) {
+		//endianness doesn't matter for this test 
+		fakerom[0] = val >> 8;
+		fakerom[1] = val & 0xFF;
+		if (fixck_backend(fakerom, 3)) return;
+	}
+}
+
+
+static void fixck(FILE *i_file, FILE *o_file) {
 
 	/* load whole ROM */
 	if (fread(rombuf,1,ROMSIZE,i_file) != ROMSIZE) {
@@ -41,17 +80,8 @@ static void fixck(FILE *i_file, FILE *o_file) {
 		return;
 	}
 
-	//add all except last byte
-	cks_orig = calc_cks(ROMSIZE - 1);
-	rombuf[ROMSIZE - 1] = (~cks_orig) + 1;
-	printf("orig sum: 0x%02X\n", cks_orig);
-
-	cks_new = calc_cks(ROMSIZE);
-	if (cks_new == 0) {
-		printf("checksum fixed with adjustment 0x%02X !\n", (unsigned) rombuf[ROMSIZE -1]);
-	} else {
-		printf("checksum adjustment 0x%02X failed, got 0x%02X !?\n", (unsigned) rombuf[ROMSIZE -1], cks_new);
-		return;
+	if (!fixck_backend(rombuf, ROMSIZE)) {
+		printf("checksum fixed with lastbyte=0x%02X !\n", (unsigned) rombuf[ROMSIZE -1]);
 	}
 
 	fwrite(rombuf, 1, ROMSIZE, o_file);
@@ -73,6 +103,8 @@ int main(int argc, char * argv[]) {
 			"\n\tExample: %s dc118_orig.bin hackrom.bin\n", argv[0], DEFAULT_OFILE, argv[0]);
 		return 0;
 	}
+
+	selftest();
 
 	//input file
 	if ((i_file=fopen(argv[1],"rb"))==NULL) {
