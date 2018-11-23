@@ -23,19 +23,23 @@ FILE *dbg_stream;
  * is never added to the total.
  */
 static u8 calc_cks(u8 *buf, unsigned len) {
-	u8 checksum;
+	u16 ck16 = 0;
 	unsigned i;
-	u32 sum32 = 0;
 
+	/* this loop isn't a strictly-correct addc emulation,
+	 * because it doesn't use the "previous" cary but instead adds first
+	 * then add the carry.
+	 */
 	for (i=0; i < (len - 1); i++) {
-		sum32 += buf[i];
+		ck16 += buf[i];
+		if (ck16 & 0x100) {
+			ck16 += 1;
+			ck16 &= 0xFF;
+		}
 	}
-
-	//simulate effect of adding with "addc" opcode
-	checksum = (sum32 & 0xff) + ((sum32 >> 8) & 0xff) + ((sum32 >> 16) & 0xff);
-	//and add last value, *without* its carry
-	checksum += buf[len - 1];
-	return checksum;
+	//add last value, dropping its carry
+	ck16 += buf[len-1];
+	return ck16 & 0xFF;
 }
 
 /** fix checksum of ROM loaded at *buf.
