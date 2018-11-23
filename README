@@ -2,6 +2,27 @@ Utilities and code for patching HP3478A firmware.
 
 Experimental, not for general consumption
 
-
+# utilities
 * ckfix
 Fix checksum by adjusting last byte.
+
+# ROM patches
+These apply on the dc118 ROM version.
+
+* 01_ADtest
+patch to bypass "AD TEST" self test. 
+
+* 02_ADcomms
+neutralizes comms to skip "AD LINK" self test, and pretend the ADC reads 0 in normal operations.
+
+# Applying ROM patches
+To apply patches, srecord is needed.
+
+Example to apply one single patch "01_ADtest" to the original dc118 ROM dump:
+
+`srec_cat ../dc118.bin -bin 01_ADtest.hex -intel -contradictory-bytes=ignore -redundant-bytes=ignore -o patched.bin -bin`
+Then, running ckfix to fix checksums:
+`ckfix patched.bin patched_fixed.bin`
+
+# Verifying ROM patches
+`srec_cmp ../dc118.bin -bin patched.bin -bin -v`
