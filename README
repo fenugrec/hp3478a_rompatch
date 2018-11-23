@@ -17,10 +17,13 @@ neutralizes comms to skip "AD LINK" self test, and pretend the ADC reads 0 in no
 
 # Applying ROM patches
 To apply patches, srecord is needed.
+TODO : when patches apply in the upper 4kB bank (> 0x1000), the hex file needs to be offseted since the assembler doesn't know about the upper 4kB.
 
 Example to apply one single patch "01_ADtest" to the original dc118 ROM dump:
 
-`srec_cat ../dc118.bin -bin 01_ADtest.hex -intel -contradictory-bytes=ignore -redundant-bytes=ignore -o patched.bin -bin`
+`srec_cat ../dc118.bin -bin 01_ADtest.hex -intel -contradictory-bytes=warn -redundant-bytes=ignore -o patched.bin -bin`
+(contradictory-bytes can also be set to ignore, but 'warn' allows to inspect and confirm the changes
+
 Then, running ckfix to fix checksums:
 `ckfix patched.bin patched_fixed.bin`
 

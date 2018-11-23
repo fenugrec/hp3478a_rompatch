@@ -9,19 +9,19 @@ CFLAGS = $(BASICFLAGS) $(OPTFLAGS)
 
 # flags for asl assembler
 ASL = asl
-ASLFLAGS = 
+ASLFLAGS = -q
 P2HEX = p2hex
 P2FLAGS = -k
 
 TGTLIST = ckfix
-PATCHLIST = 01_ADtest.hex
+PATCHLIST = 01_ADtest.hex 02_ADcomms.hex
 
 all: $(TGTLIST) $(PATCHLIST)
 
 ckfix:	ckfix.c
 
 %.p : %.asm
-	$(ASL) $(ASFLAGS) $< -o $@
+	$(ASL) $(ASLFLAGS) $< -o $@
 
 %.hex : %.p
 	$(P2HEX) $(P2FLAGS) $<
