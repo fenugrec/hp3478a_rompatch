@@ -5,11 +5,12 @@
 ;
 ; STATUS
 ;	- works in MAME ! except for TODO items
+;	- signed math is sloppy and possibly buggy.
+;	- changing ranges / modes keeps the same display offset but becomes meaningless.
 ; TODO
 ;	- test on real metal
 ;	- test "MATH" annun on real metal
-;	- manage signs properly. Currently only works with >0 readings and offsets?
-;
+
 ;
 ;Note : this must be loaded in the upper 4kB ROM bank, i.e. +0x1000:
 ; srec_cat orig.bin -bin 04_relmode_h.hex -intel -offset 0x1000 -contradictory-bytes=warn -o patch04h.bin
@@ -19,6 +20,9 @@
 ; Add a shift+K handler. 0x0E bytes available at end of 1100 page for stub
 ; add shiftk handler (?? bytes)
 ; patch into "render_reading" for the offset subtraction (?? bytes)
+;
+; it seems [39] contains just a sign flag, "99" for neg, "00" for pos. So we need
+; to handle this like the ROM does when adding the ADC reading to the cal offset?
 ;
 ; iRAM[60] & 0x01 : bitflag, 1 if relmode active
 ; u8 *offs=&iRAM[61] : 4-byte PBCD offset
@@ -44,7 +48,7 @@ render_reading:
 	org 08AFh	;18AF : original opcode
 	;just used as a return point, and a guard,
 	;in case the assembler adds a "sel mb" opcode above, which would clobber this.
-render_orig:
+render_continue:
 	clr	f1
 
 
@@ -62,19 +66,29 @@ toggle_relflag:
 	mov	a, @r0
 	xrl	a, #1
 	mov @r0, a
-	;even if we were disabling relmode, copy the readings anyway.
+	jb0	get_reading
+_shiftk_exit:
+	retr
+
+	;copy the reading and 9's complement if required
 get_reading:
 	;there's no "memcpy" in this 4kB bank unfortunately.
 	mov	r0, #offs	;dest
 	mov	r1, #reading
-	mov	r2, #4
+	mov	r2, #3
 cploop:
 	mov	a, @r1
 	mov @r0, a
 	inc	r0
 	inc r1
 	djnz	r2,cploop
-	sel mb0
+_cp_finished
+	;check sign of reading and fixup if negative
+	mov r0, #reading_sign
+	mov	a, @r0
+	jz	_shiftk_exit
+	mov	r0, #offs + 2
+	call	fixup
 	retr	;key handlers have a retr
 
 ;***************************************************
@@ -85,15 +99,22 @@ render_hook:
 	cpl	f0
 	mov	r0, #relflags
 	mov	a, @r0
-	jb0	sub_offset	;only do math if enabled
-	jmp	render_orig
+	jb0	do_relmode	;only do math if enabled
+	jmp	render_continue
 
+do_relmode:
+;again, fixup reading if negative:
+	mov	r0, #reading_sign
+	mov	a, @r0
+	jz	sub_offset
+	mov	r0, #reading + 2
+	call	fixup
 ;also, doesn't seem to be a reusable "subtract_BCD" function in this 4kB bank.
 ;Algo copied from @0F28
 sub_offset:
-	mov	r0, #reading + 4
-	mov	r1, #offs + 4
-	mov	r2, #05H
+	mov	r0, #reading + 3
+	mov	r1, #offs + 3
+	mov	r2, #04H
 	clr	c
 _subloop:
 	mov	a,@r1
@@ -106,7 +127,27 @@ _subloop:
 	dec	r0
 	dec	r1
 	djnz	r2,_subloop
-	jmp	render_orig
+;fixup as "9's complement" if result is negative
+	;after subloop, a=@[reading], and r0=&reading-1
+	jb7	sub_fixup
+	mov	@r0, #0
+	jmp	render_continue
+sub_fixup
+	mov	@r0, #99H
+	mov	r0,#reading + 2
+	call	fixup
+	jmp	render_continue
+
+;9's complement. r0 points to end of value to be fixed
+fixup:
+	mov	r2,#3
+_fixloop:	mov	a,@r0
+	add	a,#66H
+	cpl	a
+	mov	@r0,a
+	dec	r0
+	djnz	r2,_fixloop
+	ret
 
 	org	0AFCh	;end of window
 guard_1AFC
@@ -114,7 +155,8 @@ guard_1AFC
 
 ;***************************************************
 
-reading	EQU	39H
+reading_sign	EQU	39H
+reading	EQU	3AH
 relflags	EQU 60H
 offs	EQU	61H
 
