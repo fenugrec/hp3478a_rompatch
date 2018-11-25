@@ -14,7 +14,7 @@ P2HEX = p2hex
 P2FLAGS = -k
 
 TGTLIST = ckfix
-PATCHLIST = 01_ADtest.hex 02_ADcomms.hex
+PATCHLIST = 01_ADtest.hex 02_ADcomms.hex 03_ckdis.hex
 
 all: $(TGTLIST) $(PATCHLIST)
 

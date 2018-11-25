@@ -7,13 +7,16 @@ Experimental, not for general consumption
 Fix checksum by adjusting last byte.
 
 # ROM patches
-These apply on the dc118 ROM version.
+These apply on the dc118 ROM version. Most of them are for development use, in particular for testing the ROM under MAME emulation.
 
 * 01_ADtest
 patch to bypass "AD TEST" self test. 
 
 * 02_ADcomms
 neutralizes comms to skip "AD LINK" self test, and pretend the ADC reads 0 in normal operations.
+
+* 03_ckdis
+disable ROM checksum entirely. For development use only ! Patch must be applied at 0x1000 offset.
 
 # Applying ROM patches
 To apply patches, srecord is needed.
