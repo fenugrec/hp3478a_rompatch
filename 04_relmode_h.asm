@@ -4,28 +4,38 @@
 ;and subtracts that offset from all subsequent readings.
 ;
 ; STATUS
-;	- works in MAME ! except for TODO items
+;	- works on real metal ! except for TODO items
 ;	- signed math is sloppy and possibly buggy.
-;	- changing ranges / modes keeps the same display offset but becomes meaningless.
 ; TODO
-;	- test on real metal
-;	- test "MATH" annun on real metal
+;	- changing ranges / modes keeps the same display offset but becomes meaningless.
+;	- test MATH annun on real metal
 
 ;
 ;Note : this must be loaded in the upper 4kB ROM bank, i.e. +0x1000:
 ; srec_cat orig.bin -bin 04_relmode_h.hex -intel -offset 0x1000 -contradictory-bytes=warn -o patch04h.bin
+; or
+; ./patchrom.sh orig.bin 04_relmode_h.hex 0x1000 patched_04.bin
+;
+; modified opcodes :
+; 117A, 18AD,18AE,
+; 19CB,19CC,19CD,
 ;
 ;
 ; ******* technique
-; Add a shift+K handler. 0x0E bytes available at end of 1100 page for stub
-; add shiftk handler (?? bytes)
-; patch into "render_reading" for the offset subtraction (?? bytes)
+; This consists of three main elements :
+; 
+; 1- Add a shift+Key keypress handler. 0x0E bytes available at end of 1100 page for stub
+
+; 2- patch into "render_reading" for the offset subtraction (?? bytes)
 ;
-; it seems [39] contains just a sign flag, "99" for neg, "00" for pos. So we need
+; it seems iRAM[39] contains just a sign flag, "99" for neg, "00" for pos. So we need
 ; to handle this like the ROM does when adding the ADC reading to the cal offset?
 ;
 ; iRAM[60] & 0x01 : bitflag, 1 if relmode active
 ; u8 *offs=&iRAM[61] : 4-byte PBCD offset
+;
+; 3- patch into "generate_annuns" to override the MATH annun always-off.
+
 
 	cpu 8039
 
@@ -53,14 +63,41 @@ render_continue:
 
 
 ;***************************************************
-	org	0A99H	;[1A99-1AFB] window (99 bytes)
-shiftk_handler:
-toggle_annun:
-	;assume annunciator bits are stored in the same order as they appear on-screen.
-	mov	r0, #ann_msb
+	org 09CBh	;19CB: math annun hook.
+	; orig code we clobber and replace had "SEL MB0" since it's calling rotl_annun4/8.
+	;	clr	c		; 19cb
+	;	call	rotl_annun8	; 19cc
+annun_stub:
+	;so ASL doesn't support "ASSUME MB=0", and we want to guarantee we generate
+	; exactly 3 bytes here (call + nop). With "phase" we pretend these are executing
+	; in MB0 thus asl will not emit "sel mb0".
+	phase 01CBh
+	call	annun_hook
+	nop
+	dephase
+
+	org 09CEh	;19CE: original opcode
+	;just used as a return point, and a guard;
+	; luckily we don't need to restore r0 or A
+annun_continue:
+	mov	r0,#40H	; 19ce
+
+
+	org 06C7h	;16C7-16CF window: 9 bytes !!
+	; try to fit inside a window in MB0 (1000-17FF) to simplify MB0/1 management...
+annun_hook:
+	mov	r0, #relflags
 	mov	a, @r0
-	xrl	a, #ann_math
-	mov	@r0, a
+	rrc a	; carry = bit0 = relmode_active
+	jmp rotl_annun8	;it will ret to annun_continue, so we don't use more stack depth
+	
+	org 06D0h	;16D0: end of window, original opcode
+	anl	P2, #0BFh
+
+
+;***************************************************
+	org	0A99H	;[1A99-1AFB] window (0x63 bytes)
+shiftk_handler:
 toggle_relflag:	
 	mov	r0, #relflags
 	mov	a, @r0
@@ -159,6 +196,4 @@ reading_sign	EQU	39H
 reading	EQU	3AH
 relflags	EQU 60H
 offs	EQU	61H
-
-ann_msb	EQU 53H
-ann_math	EQU 08H	;bitmask for MATH annunciator (5th from the left)
+rotl_annun8 EQU 068CH

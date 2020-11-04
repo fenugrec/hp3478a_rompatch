@@ -10,10 +10,12 @@ Fix checksum by adjusting last byte.
 These apply on the dc118 ROM version. Most of them are for development use, in particular for testing the ROM under MAME emulation.
 
 * 01_ADtest
-patch to bypass "AD TEST" self test. 
+patch to bypass "AD TEST" self test.
+Apply in first bank (offset 0)
 
 * 02_ADcomms
 neutralizes comms to skip "AD LINK" self test, and pretend the ADC reads 0 in normal operations.
+Apply in first bank (offset 0)
 
 * 03_ckdis
 disable ROM checksum entirely. For development use only ! Patch must be applied at 0x1000 offset.
@@ -32,3 +34,6 @@ Then, running ckfix to fix checksums:
 
 # Verifying ROM patches
 `srec_cmp ../dc118.bin -bin patched.bin -bin -v`
+
+To run in MAME : need to apply patches 01_ADtest and 02_ADcomms, otherwise emulation hangs at "AD LINK FAIL".
+Then, `mame hp3478a` from the directory where rom_dc118.bin is stored (the builtin name for the default ROM).
