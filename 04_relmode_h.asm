@@ -7,8 +7,7 @@
 ;	- works on real metal ! except for TODO items
 ;	- signed math is sloppy and possibly buggy.
 ; TODO
-;	- changing ranges / modes keeps the same display offset but becomes meaningless.
-;	- test MATH annun on real metal
+;	- test MATH on real metal
 
 ;
 ;Note : this must be loaded in the upper 4kB ROM bank, i.e. +0x1000:
@@ -17,36 +16,62 @@
 ; ./patchrom.sh orig.bin 04_relmode_h.hex 0x1000 patched_04.bin
 ;
 ; modified opcodes :
+; 1157,1158
 ; 117A, 18AD,18AE,
 ; 19CB,19CC,19CD,
 ;
 ;
 ; ******* technique
-; This consists of three main elements :
+; This consists of a few elements :
 ; 
-; 1- Add a shift+Key keypress handler. 0x0E bytes available at end of 1100 page for stub
+; 1- Add a Shift+"4-wire ohm" keypress handler. 0x0E bytes available at end of 1100 page for stub
 
-; 2- patch into "render_reading" for the offset subtraction (?? bytes)
+; 2- patch into "render_reading" for the offset subtraction (must jump to bigger window)
 ;
+; 3- patch into "generate_annuns" to override the MATH annun always-off.
+;
+; 4- patch into "key_found" to disable relative mode when any key is pressed.
+
 ; it seems iRAM[39] contains just a sign flag, "99" for neg, "00" for pos. So we need
 ; to handle this like the ROM does when adding the ADC reading to the cal offset?
 ;
 ; iRAM[60] & 0x01 : bitflag, 1 if relmode active
 ; u8 *offs=&iRAM[61] : 4-byte PBCD offset
 ;
-; 3- patch into "generate_annuns" to override the MATH annun always-off.
-
 
 	cpu 8039
 
+	org 0157h	;1157 : key_found
+	;original opcode we clobbered:
+	;call	sub_17E9
+keyfound_patch:
+	call keyfound_hook
+
+	org 0159h	;1159 : original opcode restored, as guard
+	mov	r1,#024h
+
+
+
+;***************************************************
+
 	org 017Ah	;117A : inside shift+K jmptable
 keyjmp_shifted_patch:
-	db 0F2h
+	db 0F2h		;will cause jump to 11F2
 
-	org 01F2h	;11f2
+	org 01F2h	;11f2-11ff window : 14 bytes
 shiftk_stub:
 	;sel	mb1	;asl smart enough to add this
 	jmp	shiftk_handler
+
+
+keyfound_hook:
+	;any key : clear relflag. We can clobber r1 since it's overwritten when we ret to keyfound_continue
+	mov	r1, #relflags
+	clr a
+	mov @r1, a
+
+	; since we call'ed the _hook, we jmp to the original target in order to ret to the correct place (1159)
+	jmp	keyfound_continue
 
 
 ;***************************************************
@@ -98,14 +123,11 @@ annun_hook:
 ;***************************************************
 	org	0A99H	;[1A99-1AFB] window (0x63 bytes)
 shiftk_handler:
-toggle_relflag:	
+set_relflag:
 	mov	r0, #relflags
 	mov	a, @r0
-	xrl	a, #1
+	orl	a, #1
 	mov @r0, a
-	jb0	get_reading
-_shiftk_exit:
-	retr
 
 	;copy the reading and 9's complement if required
 get_reading:
@@ -126,6 +148,7 @@ _cp_finished
 	jz	_shiftk_exit
 	mov	r0, #offs + 2
 	call	fixup
+_shiftk_exit:
 	retr	;key handlers have a retr
 
 ;***************************************************
@@ -197,3 +220,4 @@ reading	EQU	3AH
 relflags	EQU 60H
 offs	EQU	61H
 rotl_annun8 EQU 068CH
+keyfound_continue EQU 07E9h	;17E9 actually

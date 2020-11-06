@@ -24,8 +24,11 @@ disable ROM checksum entirely. For development use only ! Patch must be applied 
 To apply patches, srecord is needed.
 TODO : when patches apply in the upper 4kB bank (> 0x1000), the hex file needs to be offseted since the assembler doesn't know about the upper 4kB.
 
-Example to apply one single patch "01_ADtest" to the original dc118 ROM dump:
+Example to apply one single patch "01_ADtest" to the original dc118 ROM dump, including checksum fix:
 
+`./patchrom.sh ../dc118.bin 01_ADtest.hex 0 patched_01.bin`
+
+or, manually :
 `srec_cat ../dc118.bin -bin 01_ADtest.hex -intel -contradictory-bytes=warn -redundant-bytes=ignore -o patched.bin -bin`
 (contradictory-bytes can also be set to ignore, but 'warn' allows to inspect and confirm the changes
 
