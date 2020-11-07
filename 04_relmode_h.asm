@@ -93,9 +93,9 @@ render_continue:
 	;	clr	c		; 19cb
 	;	call	rotl_annun8	; 19cc
 annun_stub:
-	;so ASL doesn't support "ASSUME MB=0", and we want to guarantee we generate
-	; exactly 3 bytes here (call + nop). With "phase" we pretend these are executing
-	; in MB0 thus asl will not emit "sel mb0".
+	; we want to guarantee we generate exactly 3 bytes here (call + nop).
+	; ASL supports "ASSUME MB:0" since 1.42-bld178, but for a more standard fix, using "phase"
+	; we pretend these are executing in MB0 thus asl will not emit "sel mb0".
 	phase 01CBh
 	call	annun_hook
 	nop
