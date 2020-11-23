@@ -4,11 +4,9 @@
 ;and subtracts that offset from all subsequent readings.
 ;
 ; STATUS
-;	- works on real metal ! except for TODO items
+;	- works on real metal !
 ;	- signed math is sloppy and possibly buggy.
-; TODO
-;	- test MATH on real metal
-
+;	- must not be used in auto-range mode (saved offset will be incorrect except on the initial range)
 ;
 ;Note : this must be loaded in the upper 4kB ROM bank, i.e. +0x1000:
 ; srec_cat orig.bin -bin 04_relmode_h.hex -intel -offset 0x1000 -contradictory-bytes=warn -o patch04h.bin

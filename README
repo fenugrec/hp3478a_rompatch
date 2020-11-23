@@ -20,6 +20,11 @@ Apply in first bank (offset 0)
 * 03_ckdis
 disable ROM checksum entirely. For development use only ! Patch must be applied at 0x1000 offset.
 
+* 04_relmode
+the most interesting one : implements "relative mode" to any (manual) range.
+Pressing Shift then 4Wire saves and applies the current reading as an offset . There is an example ROM with this patch applied in patched_roms/
+
+
 # Applying ROM patches
 To apply patches, srecord is needed.
 TODO : when patches apply in the upper 4kB bank (> 0x1000), the hex file needs to be offseted since the assembler doesn't know about the upper 4kB.
