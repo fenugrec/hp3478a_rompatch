@@ -122,6 +122,13 @@ annun_hook:
 	org	0A99H	;[1A99-1AFB] window (0x63 bytes)
 shiftk_handler:
 set_relflag:
+		;set relmode only if Manual ranging is enabled.
+		;see 0x19E8: manual range if (~(ram[40] & 0x02))
+		; i.e. autorange if (ram[40] & 0x02)
+	mov r0, #modeflags
+	mov	a,@r0
+	jb1	_shiftk_exit	;don't enable relmode
+
 	mov	r0, #relflags
 	mov	a, @r0
 	orl	a, #1
@@ -215,6 +222,7 @@ guard_1AFC
 
 reading_sign	EQU	39H
 reading	EQU	3AH
+modeflags EQU 40H
 relflags	EQU 60H
 offs	EQU	61H
 rotl_annun8 EQU 068CH
