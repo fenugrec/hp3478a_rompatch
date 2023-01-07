@@ -1,0 +1,7 @@
+Patch for dc118_01_ADtest.bin
+
+Patch 2 bytes in dc118_01_ADtest.bin
+dc118_01_ADtest.bin
+;-----------------------------------
+000006B3: C6 C4
+00001FFF: BC BE

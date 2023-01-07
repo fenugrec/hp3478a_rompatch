@@ -1,0 +1,8 @@
+Patch for dc118_03_ckdis.bin
+
+Patch 3 bytes in dc118_03_ckdis.bin
+dc118_03_ckdis.bin
+;----------------------------------
+00001057: D4 04
+00001058: 9E 5F
+00001FFF: BC CC
