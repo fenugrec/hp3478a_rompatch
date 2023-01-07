@@ -8,7 +8,9 @@
 ;	- signed math is sloppy and possibly buggy.
 ;	- must not be used in auto-range mode (saved offset will be incorrect except on the initial range)
 ;
-;Note : this must be loaded in the upper 4kB ROM bank, i.e. +0x1000:
+;Note : this must be loaded in the upper 4kB ROM bank, i.e. +0x1000.
+; This is taken care of via the .phex_args file by Make
+
 ; srec_cat orig.bin -bin 04_relmode_h.hex -intel -offset 0x1000 -contradictory-bytes=warn -o patch04h.bin
 ; or
 ; ./patchrom.sh orig.bin 04_relmode_h.hex 0x1000 patched_04.bin

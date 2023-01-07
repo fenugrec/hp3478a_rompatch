@@ -8,6 +8,10 @@ Fix checksum by adjusting last byte.
 
 # ROM patches
 These apply on the dc118 ROM version. Most of them are for development use, in particular for testing the ROM under MAME emulation.
+Running `make` should produce proper .hex files for each patch, and .crk files in crk_patches/.
+
+Note : applying multiple patches requires fixing the checksum with `ckfix`.
+
 
 * 01_ADtest
 patch to bypass "AD TEST" self test.

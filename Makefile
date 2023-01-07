@@ -17,6 +17,7 @@ PLIST = plist
 TGTLIST = ckfix
 PATCHLIST = 01_ADtest 02_ADcomms 03_ckdis 04_relmode_h
 
+
 all: $(TGTLIST) $(PATCHLIST:=.hex)
 
 ckfix:	ckfix.c
@@ -25,8 +26,12 @@ ckfix:	ckfix.c
 	$(ASL) $(ASLFLAGS) $< -o $@
 	$(PLIST) $@
 
+
+# give a per-patch offset arg to p2hex since we can't do that in the .asm (asl limitation)
+
 %.hex : %.p
-	$(P2HEX) $(P2FLAGS) $<
+	touch $(<:.p=.phex_args)
+	$(P2HEX) $(P2FLAGS) $< -R `cat $(<:.p=.phex_args)`
 
 clean:
 	rm -f *.o
