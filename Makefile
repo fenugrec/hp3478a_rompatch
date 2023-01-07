@@ -15,9 +15,9 @@ P2FLAGS = -k
 PLIST = plist
 
 TGTLIST = ckfix
-PATCHLIST = 01_ADtest.hex 02_ADcomms.hex 03_ckdis.hex 04_relmode_h.hex
+PATCHLIST = 01_ADtest 02_ADcomms 03_ckdis 04_relmode_h
 
-all: $(TGTLIST) $(PATCHLIST)
+all: $(TGTLIST) $(PATCHLIST:=.hex)
 
 ckfix:	ckfix.c
 
@@ -30,4 +30,4 @@ ckfix:	ckfix.c
 
 clean:
 	rm -f *.o
-	rm -f $(TGTLIST) $(PATCHLIST)
+	rm -f $(TGTLIST) $(PATCHLIST:=.hex)
